@@ -93,7 +93,9 @@ func toProtoScalar(fd protoreflect.FieldDescriptor, v any) (protoreflect.Value, 
 	case protoreflect.EnumKind:
 		return enumValue(fd, v)
 
-	case protoreflect.MessageKind, protoreflect.GroupKind:
+	default:
+		// MessageKind / GroupKind — every scalar Kind is handled above, so a
+		// field reaching the default is a message field.
 		m, ok := v.(*Message)
 		if !ok {
 			return protoreflect.Value{}, typeMismatch(fd, v, string(fd.Message().FullName()))
@@ -104,8 +106,6 @@ func toProtoScalar(fd protoreflect.FieldDescriptor, v any) (protoreflect.Value, 
 		}
 		return protoreflect.ValueOfMessage(m.m), nil
 	}
-	// Unreachable: every protoreflect scalar/message Kind is handled above.
-	return protoreflect.Value{}, newTypeError("unsupported field kind")
 }
 
 // enumValue converts a Ruby enum assignment (Symbol name, String name or
@@ -161,11 +161,10 @@ func fromProtoScalar(fd protoreflect.FieldDescriptor, v protoreflect.Value, pool
 			return Symbol(ev.Name())
 		}
 		return int64(num)
-	case protoreflect.MessageKind, protoreflect.GroupKind:
+	default:
+		// MessageKind / GroupKind.
 		return &Message{m: v.Message(), pool: pool}
 	}
-	// Unreachable: every protoreflect scalar/message Kind is handled above.
-	return nil
 }
 
 // asInt64 accepts the Go integer types a host uses for a Ruby Integer.

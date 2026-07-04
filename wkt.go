@@ -57,21 +57,15 @@ const anyTypePrefix = "type.googleapis.com/"
 // Google::Protobuf::Any#pack: it sets type_url to the conventional
 // type.googleapis.com/<full name> and value to the binary encoding of msg.
 func AnyPack(msg *Message) (*Message, error) {
-	anyCls := WellKnownType("Any")
-	any, err := anyCls.New()
-	if err != nil {
-		return nil, err
-	}
 	data, err := Encode(msg)
 	if err != nil {
 		return nil, err
 	}
-	if err := any.Set("type_url", anyTypePrefix+string(msg.m.Descriptor().FullName())); err != nil {
-		return nil, err
-	}
-	if err := any.Set("value", data); err != nil {
-		return nil, err
-	}
+	// Any is always registered and type_url/value are ordinary string/bytes
+	// fields, so New and these Set calls cannot fail.
+	any, _ := WellKnownType("Any").New()
+	_ = any.Set("type_url", anyTypePrefix+string(msg.m.Descriptor().FullName()))
+	_ = any.Set("value", data)
 	return any, nil
 }
 
@@ -80,13 +74,10 @@ func AnyPack(msg *Message) (*Message, error) {
 func AnyIs(any *Message, class *MessageClass) bool {
 	url, err := any.Get("type_url")
 	if err != nil {
+		// any is not an Any message (no type_url field).
 		return false
 	}
-	s, ok := url.(string)
-	if !ok {
-		return false
-	}
-	return typeFromURL(s) == class.Name()
+	return typeFromURL(url.(string)) == class.Name()
 }
 
 // AnyUnpack decodes the message packed inside the Any as an instance of class,
@@ -96,12 +87,9 @@ func AnyUnpack(any *Message, class *MessageClass) (*Message, error) {
 	if !AnyIs(any, class) {
 		return nil, nil
 	}
-	val, err := any.Get("value")
-	if err != nil {
-		return nil, err
-	}
-	data, _ := val.([]byte)
-	return Decode(class, data)
+	// AnyIs guaranteed this is an Any, so value is a present bytes field.
+	val, _ := any.Get("value")
+	return Decode(class, val.([]byte))
 }
 
 // typeFromURL returns the trailing type name of an Any type_url.

@@ -34,14 +34,10 @@ func scratchList(t Symbol) (protoreflect.FieldDescriptor, error) {
 	if fd, ok := scratchListFDs[t]; ok {
 		return fd, nil
 	}
-	if _, ok := fieldTypes[t]; !ok {
-		return nil, &ArgumentError{Message: "unknown type :" + string(t)}
-	}
-	if t == MessageType || t == Enum {
-		return nil, &ArgumentError{Message: "standalone RepeatedField of :" + string(t) + " is unsupported; read it from a message field"}
-	}
 	scratchSeq++
 	name := fmt.Sprintf("ScratchList%d", scratchSeq)
+	// Build validates the element type: an unknown, :message or :enum element
+	// type fails here (a standalone list of those has no named type to point at).
 	if err := scratchPool.Build(func(b *Builder) {
 		b.AddMessage(name, func(mb *MessageBuilder) { mb.Repeated("v", t, 1) })
 	}); err != nil {
@@ -61,17 +57,10 @@ func scratchMap(k, v Symbol) (protoreflect.FieldDescriptor, error) {
 	if fd, ok := scratchMapFDs[key]; ok {
 		return fd, nil
 	}
-	if _, ok := fieldTypes[k]; !ok {
-		return nil, &ArgumentError{Message: "unknown map key type :" + string(k)}
-	}
-	if _, ok := fieldTypes[v]; !ok {
-		return nil, &ArgumentError{Message: "unknown map value type :" + string(v)}
-	}
-	if v == MessageType || v == Enum {
-		return nil, &ArgumentError{Message: "standalone Map with :" + string(v) + " values is unsupported; read it from a message field"}
-	}
 	scratchSeq++
 	name := fmt.Sprintf("ScratchMap%d", scratchSeq)
+	// Build validates key/value types: an unknown key/value type, or a :message /
+	// :enum value type (unsupported standalone), fails here.
 	if err := scratchPool.Build(func(b *Builder) {
 		b.AddMessage(name, func(mb *MessageBuilder) { mb.Map("v", k, v, 1) })
 	}); err != nil {

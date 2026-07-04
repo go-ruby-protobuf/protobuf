@@ -182,6 +182,8 @@ func (m *Map) Inspect() string {
 }
 
 // lessKey orders map keys of the same (scalar) type for deterministic iteration.
+// Protobuf map keys are always one of string, int64 (signed 32/64-bit kinds),
+// uint64 (unsigned 32/64-bit kinds) or bool, so those four cases are exhaustive.
 func lessKey(a, b any) bool {
 	switch x := a.(type) {
 	case string:
@@ -190,9 +192,7 @@ func lessKey(a, b any) bool {
 		return x < b.(int64)
 	case uint64:
 		return x < b.(uint64)
-	case bool:
-		return !x && b.(bool)
-	default:
-		return false
+	default: // bool
+		return !x.(bool) && b.(bool)
 	}
 }

@@ -95,12 +95,9 @@ func (mb *MessageBuilder) Map(name string, keyType, valType Symbol, number int, 
 	mb.msg.NestedType = append(mb.msg.NestedType, entry)
 
 	// The map field itself: a repeated field of the synthesised entry message.
-	fullEntry := "." + mb.msg.GetName() + "." + entryName
-	f, err := makeField(name, MessageType, number, labelRepeated, nil, strings.TrimPrefix(fullEntry, "."))
-	if err != nil {
-		mb.b.fail(err.Error())
-		return
-	}
+	// The entry name is always a valid message type reference, so this cannot
+	// fail (unlike the user-supplied key/value types above).
+	f, _ := makeField(name, MessageType, number, labelRepeated, nil, mb.msg.GetName()+"."+entryName)
 	mb.msg.Field = append(mb.msg.Field, f)
 }
 
