@@ -40,27 +40,44 @@ func TestBinaryRoundTrip(t *testing.T) {
 	}
 }
 
-// TestWireCompatDynamicOracle proves our encode of the "All" message equals the
-// canonical google.golang.org/protobuf encoding of an identically-populated
-// dynamic message of the same descriptor.
+// TestWireCompatDynamicOracle proves our encode/decode is wire-compatible with
+// the canonical google.golang.org/protobuf runtime, in both directions, using a
+// dynamic message of the same descriptor as the oracle. (Byte-identical output
+// is deliberately NOT asserted: the runtime does not guarantee a stable field
+// order between independent Marshal calls, so the invariant is semantic.)
 func TestWireCompatDynamicOracle(t *testing.T) {
 	p := newTestPool(t)
 	cls := p.LookupMsgclass("All")
+
+	// Our encode -> canonical decode: the oracle reads back the exact values.
 	m := mustNew(t, cls, map[string]any{"i32": int64(42), "st": "wire"})
 	ours, err := Encode(m)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	oracle := dynamicpb.NewMessage(cls.md)
-	oracle.Set(cls.md.Fields().ByName("i32"), protoreflect.ValueOfInt32(42))
-	oracle.Set(cls.md.Fields().ByName("st"), protoreflect.ValueOfString("wire"))
-	want, err := proto.Marshal(oracle)
+	if err := proto.Unmarshal(ours, oracle); err != nil {
+		t.Fatalf("canonical runtime cannot decode our bytes: %v", err)
+	}
+	if oracle.Get(cls.md.Fields().ByName("i32")).Int() != 42 ||
+		oracle.Get(cls.md.Fields().ByName("st")).String() != "wire" {
+		t.Fatalf("canonical decode of our bytes wrong: %v", oracle)
+	}
+
+	// Canonical encode -> our decode: we read back the exact values.
+	canon := dynamicpb.NewMessage(cls.md)
+	canon.Set(cls.md.Fields().ByName("i32"), protoreflect.ValueOfInt32(42))
+	canon.Set(cls.md.Fields().ByName("st"), protoreflect.ValueOfString("wire"))
+	canonBytes, err := proto.Marshal(canon)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(ours, want) {
-		t.Fatalf("wire bytes differ:\n ours=%x\nwant=%x", ours, want)
+	back, err := Decode(cls, canonBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mustGet(t, back, "i32") != int64(42) || mustGet(t, back, "st") != "wire" {
+		t.Fatalf("our decode of canonical bytes wrong: %s", back.Inspect())
 	}
 }
 
