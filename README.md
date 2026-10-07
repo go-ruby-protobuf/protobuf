@@ -6,7 +6,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-100%25-1a7f37)](#tests--coverage)
 [![Go Reference](https://pkg.go.dev/badge/github.com/go-ruby-protobuf/protobuf.svg)](https://pkg.go.dev/github.com/go-ruby-protobuf/protobuf)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
-[![Go](https://img.shields.io/badge/go-1.26.4%2B-00ADD8)](https://go.dev/dl/)
+[![Go](https://img.shields.io/badge/go-1.27.1%2B-00ADD8)](https://go.dev/dl/)
 
 **A pure-Go (no cgo) reimplementation of the runtime and builder surface of
 Ruby's [`google-protobuf`](https://rubygems.org/gems/google-protobuf) gem** — the
